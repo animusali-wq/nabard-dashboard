@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BankImpl Pro — Project Progress Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+  :root {
+    --navy:#0a1628;--navy-mid:#0f2040;--navy-light:#1a3356;--slate:#1e3a5f;
+    --accent:#00c9a7;--accent2:#3a86ff;--accent3:#f7b731;
+    --danger:#ef4444;--warning:#f59e0b;--success:#10b981;--purple:#8b5cf6;
+    --text:#e8edf5;--text-muted:#8899b4;--border:rgba(255,255,255,0.07);
+    --card:rgba(15,32,64,0.85);--sidebar-w:240px;--header-h:60px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,201,167,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,201,167,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+  /* LOGIN */
+  #login-screen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#050d1a 0%,#0a1628 50%,#0d1f3c 100%);}
+  .login-box{background:rgba(15,32,64,0.9);border:1px solid rgba(0,201,167,0.2);border-radius:16px;padding:48px 40px;width:420px;backdrop-filter:blur(20px);box-shadow:0 40px 80px rgba(0,0,0,0.5);}
+  .login-logo{text-align:center;margin-bottom:32px;}
+  .login-logo .brand{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;background:linear-gradient(135deg,#00c9a7,#3a86ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .login-logo .sub{color:var(--text-muted);font-size:12px;margin-top:4px;letter-spacing:2px;text-transform:uppercase;}
+  .form-group{margin-bottom:18px;}
+  .form-group label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:12px 16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;transition:border-color 0.2s;outline:none;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:rgba(0,201,167,0.5);box-shadow:0 0 0 3px rgba(0,201,167,0.1);}
+  .form-group select option{background:#0f2040;}
+  .btn{padding:12px 24px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;}
+  .btn-primary{background:linear-gradient(135deg,#00c9a7,#00a587);color:#fff;width:100%;justify-content:center;box-shadow:0 4px 15px rgba(0,201,167,0.3);}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,201,167,0.4);}
+  .btn-secondary{background:rgba(255,255,255,0.08);color:var(--text);border:1px solid var(--border);}
+  .btn-secondary:hover{background:rgba(255,255,255,0.12);}
+  .btn-danger{background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);}
+  .btn-danger:hover{background:rgba(239,68,68,0.25);}
+  .btn-sm{padding:7px 14px;font-size:12px;}
+  .login-error{color:#ef4444;font-size:12px;text-align:center;margin-top:12px;display:none;}
+  .login-loading{color:var(--accent);font-size:12px;text-align:center;margin-top:12px;display:none;}
+
+  /* APP */
+  #app{display:none;}
+  .sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:rgba(10,22,40,0.97);border-right:1px solid var(--border);z-index:100;display:flex;flex-direction:column;backdrop-filter:blur(20px);}
+  .sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid var(--border);}
+  .sidebar-logo .brand{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;background:linear-gradient(135deg,#00c9a7,#3a86ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .sidebar-logo .sub{font-size:10px;color:var(--text-muted);letter-spacing:1.5px;margin-top:2px;}
+  .sidebar-nav{flex:1;padding:12px 0;overflow-y:auto;}
+  .nav-section{padding:8px 16px 4px;font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);transition:all 0.2s;margin:1px 8px;border-radius:8px;}
+  .nav-item:hover{background:rgba(255,255,255,0.05);color:var(--text);}
+  .nav-item.active{background:rgba(0,201,167,0.1);color:var(--accent);}
+  .nav-item .icon{font-size:16px;width:20px;text-align:center;}
+  .nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;}
+  .sidebar-footer{padding:16px 20px;border-top:1px solid var(--border);}
+  .user-info{display:flex;align-items:center;gap:10px;}
+  .user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#00c9a7,#3a86ff);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
+  .user-name{font-size:13px;font-weight:600;}
+  .user-role{font-size:11px;color:var(--text-muted);}
+  .logout-btn{margin-left:auto;cursor:pointer;color:var(--text-muted);font-size:18px;}
+  .logout-btn:hover{color:var(--danger);}
+  .header{position:fixed;top:0;left:var(--sidebar-w);right:0;height:var(--header-h);background:rgba(10,22,40,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;z-index:50;backdrop-filter:blur(20px);}
+  .header-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;flex:1;}
+  .header-actions{display:flex;gap:8px;align-items:center;}
+  .search-box{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;padding:7px 14px;width:220px;}
+  .search-box input{background:none;border:none;outline:none;color:var(--text);font-size:13px;width:100%;}
+  .search-box input::placeholder{color:var(--text-muted);}
+  .db-status{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600;}
+  .db-live{background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);}
+  .db-error{background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);}
+  .main{margin-left:var(--sidebar-w);padding-top:var(--header-h);min-height:100vh;position:relative;z-index:1;}
+  .page{display:none;padding:24px;}
+  .page.active{display:block;}
+
+  /* KPIs */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;}
+  .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;transition:all 0.25s;}
+  .kpi-card:hover{border-color:rgba(0,201,167,0.3);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.3);}
+  .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .kpi-card.green::before{background:linear-gradient(90deg,#00c9a7,transparent);}
+  .kpi-card.blue::before{background:linear-gradient(90deg,#3a86ff,transparent);}
+  .kpi-card.amber::before{background:linear-gradient(90deg,#f59e0b,transparent);}
+  .kpi-card.red::before{background:linear-gradient(90deg,#ef4444,transparent);}
+  .kpi-card.purple::before{background:linear-gradient(90deg,#8b5cf6,transparent);}
+  .kpi-card.cyan::before{background:linear-gradient(90deg,#06b6d4,transparent);}
+  .kpi-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+  .kpi-value{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;line-height:1;}
+  .kpi-card.green .kpi-value{color:#00c9a7;}
+  .kpi-card.blue .kpi-value{color:#3a86ff;}
+  .kpi-card.amber .kpi-value{color:#f59e0b;}
+  .kpi-card.red .kpi-value{color:#ef4444;}
+  .kpi-card.purple .kpi-value{color:#8b5cf6;}
+  .kpi-card.cyan .kpi-value{color:#06b6d4;}
+  .kpi-sub{font-size:11px;color:var(--text-muted);margin-top:6px;}
+  .kpi-icon{position:absolute;right:16px;top:16px;font-size:28px;opacity:0.15;}
+
+  /* Charts */
+  .charts-grid{display:grid;gap:16px;margin-bottom:24px;}
+  .charts-row-2{grid-template-columns:1fr 1fr;}
+  .chart-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;transition:border-color 0.2s;}
+  .chart-card:hover{border-color:rgba(0,201,167,0.2);}
+  .chart-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:4px;}
+  .chart-sub{font-size:11px;color:var(--text-muted);margin-bottom:16px;}
+  .chart-wrap{position:relative;}
+
+  /* Filters */
+  .filters-bar{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;align-items:center;}
+  .filters-bar select{padding:8px 12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;}
+  .filters-bar select option{background:#0f2040;}
+  .filter-label{font-size:11px;color:var(--text-muted);white-space:nowrap;}
+
+  /* Table */
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{padding:10px 14px;text-align:left;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid var(--border);font-weight:600;white-space:nowrap;}
+  td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
+  tr:hover td{background:rgba(255,255,255,0.02);}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+  .badge-green{background:rgba(16,185,129,0.15);color:#10b981;}
+  .badge-blue{background:rgba(58,134,255,0.15);color:#3a86ff;}
+  .badge-amber{background:rgba(245,158,11,0.15);color:#f59e0b;}
+  .badge-red{background:rgba(239,68,68,0.15);color:#ef4444;}
+  .badge-purple{background:rgba(139,92,246,0.15);color:#8b5cf6;}
+  .badge-gray{background:rgba(255,255,255,0.08);color:var(--text-muted);}
+  .badge-cyan{background:rgba(6,182,212,0.15);color:#06b6d4;}
+  .progress-bar{background:rgba(255,255,255,0.08);border-radius:4px;height:6px;min-width:80px;}
+  .progress-fill{height:100%;border-radius:4px;transition:width 0.5s;}
+
+  /* Section */
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .section-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+  .section-actions{display:flex;gap:8px;}
+  .form-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;}
+  .form-section-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .form-row-3{grid-template-columns:1fr 1fr 1fr;}
+
+  /* Alerts */
+  .alert-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;margin-bottom:8px;}
+  .alert-item.alert-red{border-left:3px solid #ef4444;}
+  .alert-item.alert-amber{border-left:3px solid #f59e0b;}
+  .alert-item.alert-blue{border-left:3px solid #3a86ff;}
+  .alert-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+  .alert-title{font-size:13px;font-weight:600;}
+  .alert-desc{font-size:12px;color:var(--text-muted);margin-top:2px;}
+
+  /* Funnel */
+  .funnel-wrap{display:flex;flex-direction:column;gap:8px;padding:8px 0;}
+  .funnel-stage{display:flex;align-items:center;gap:12px;}
+  .funnel-bar-bg{flex:1;background:rgba(255,255,255,0.06);border-radius:6px;height:32px;position:relative;overflow:hidden;}
+  .funnel-bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding:0 12px;font-size:12px;font-weight:700;transition:width 0.6s;}
+  .funnel-label{width:60px;font-size:11px;color:var(--text-muted);text-align:right;flex-shrink:0;}
+  .funnel-count{width:30px;font-size:12px;font-weight:600;text-align:right;flex-shrink:0;}
+
+  /* Heatmap */
+  .heatmap-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+  .heat-cell{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;text-align:center;padding:4px;cursor:pointer;transition:transform 0.2s;}
+  .heat-cell:hover{transform:scale(1.05);}
+  .heat-cell .heat-name{font-size:9px;color:rgba(255,255,255,0.7);}
+  .heat-cell .heat-val{font-size:14px;font-weight:700;}
+  .heat-low{background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.3);}
+  .heat-medium{background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.3);}
+  .heat-high{background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);}
+  .heat-critical{background:rgba(139,92,246,0.3);border:1px solid rgba(139,92,246,0.4);}
+
+  /* Timeline */
+  .timeline-item{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .timeline-label{width:160px;font-size:12px;flex-shrink:0;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;}
+  .timeline-bar-wrap{flex:1;background:rgba(255,255,255,0.06);border-radius:4px;height:22px;position:relative;}
+  .timeline-bar{position:absolute;top:0;height:100%;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;}
+  .timeline-pct{width:45px;font-size:11px;color:var(--text-muted);text-align:right;flex-shrink:0;}
+
+  /* Upload */
+  .upload-area{border:2px dashed rgba(0,201,167,0.3);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all 0.2s;}
+  .upload-area:hover{border-color:var(--accent);background:rgba(0,201,167,0.05);}
+  .upload-icon{font-size:40px;margin-bottom:12px;}
+
+  /* History */
+  .history-item{padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;}
+  .history-time{color:var(--text-muted);font-size:11px;}
+
+  /* Modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+  .modal-overlay.open{display:flex;}
+  .modal{background:#0f2040;border:1px solid var(--border);border-radius:16px;padding:32px;width:620px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+  .modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:20px;}
+  .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+
+  /* Spinner */
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Toast */
+  .toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:14px 20px;font-size:13px;color:#10b981;display:none;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+  .toast.error{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.3);color:#ef4444;}
+
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px;}
+
+  @media(max-width:900px){.charts-row-2{grid-template-columns:1fr;}.form-row,.form-row-3{grid-template-columns:1fr;}.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+
+  .loading-overlay{position:fixed;inset:0;background:rgba(10,22,40,0.8);z-index:900;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+  .loading-text{color:var(--text-muted);font-size:14px;}
+  .big-spinner{width:40px;height:40px;border:3px solid rgba(0,201,167,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="brand">BankImpl Pro</div>
+      <div class="sub">Enterprise Implementation Dashboard</div>
+    </div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="login-user" placeholder="Enter username" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Enter password" />
+    </div>
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Sign In →</button>
+    <div class="login-error" id="login-error">Invalid credentials. Please try again.</div>
+    <div class="login-loading" id="login-loading">🔄 Connecting to database…</div>
+    <div style="margin-top:20px;padding:14px;background:rgba(0,201,167,0.05);border-radius:8px;font-size:11px;color:var(--text-muted);line-height:1.8;">
+      <strong style="color:var(--accent)">Credentials:</strong><br>
+      Admin: admin / Admin@2025 &nbsp;|&nbsp; PM: pm / PM@2025 &nbsp;|&nbsp; Viewer: viewer / View@2025
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="loading-overlay" id="loading-overlay" style="display:none">
+    <div class="big-spinner"></div>
+    <div class="loading-text" id="loading-text">Loading data…</div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand">BankImpl Pro</div>
+      <div class="sub">Project Command Center</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="icon">📊</span> Dashboard</div>
+      <div class="nav-item" onclick="showPage('alerts')" id="nav-alerts"><span class="icon">🚨</span> Alerts & SLA <span class="nav-badge" id="alert-count" style="display:none">0</span></div>
+      <div class="nav-section">Tracking</div>
+      <div class="nav-item" onclick="showPage('modules')" id="nav-modules"><span class="icon">📦</span> Module Tracker</div>
+      <div class="nav-item" onclick="showPage('banks')" id="nav-banks"><span class="icon">🏦</span> Bank View</div>
+      <div class="nav-item" onclick="showPage('timeline')" id="nav-timeline"><span class="icon">📅</span> Timeline</div>
+      <div class="nav-section" id="admin-nav-section">Admin</div>
+      <div class="nav-item" onclick="showPage('admin')" id="nav-admin"><span class="icon">⚙️</span> Admin Panel</div>
+      <div class="nav-item" onclick="showPage('upload')" id="nav-upload"><span class="icon">📤</span> Import / Export</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">A</div>
+        <div>
+          <div class="user-name" id="user-name-display">Admin</div>
+          <div class="user-role" id="user-role-display">Administrator</div>
+        </div>
+        <span class="logout-btn" onclick="doLogout()" title="Logout">⏻</span>
+      </div>
+    </div>
+  </aside>
+
+  <header class="header">
+    <div class="header-title" id="header-title">📊 Dashboard Overview</div>
+    <div class="header-actions">
+      <div class="search-box">
+        <span style="color:var(--text-muted)">🔍</span>
+        <input type="text" id="global-search" placeholder="Search modules, banks…" oninput="renderModuleTable()" />
+      </div>
+      <span class="db-status db-live" id="db-status">● Neon DB Live</span>
+      <button class="btn btn-secondary btn-sm" onclick="exportToPDF()">⬇ PDF</button>
+      <button class="btn btn-secondary btn-sm" onclick="exportToExcel()">⬇ Excel</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="charts-grid charts-row-2">
+        <div class="chart-card"><div class="chart-title">Module-wise Bank Coverage</div><div class="chart-sub">Banks per module</div><div class="chart-wrap" style="height:280px"><canvas id="chart-coverage"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Phase Distribution</div><div class="chart-sub">Banks by current phase</div><div class="chart-wrap" style="height:280px"><canvas id="chart-phase"></canvas></div></div>
+      </div>
+      <div class="charts-grid charts-row-2">
+        <div class="chart-card"><div class="chart-title">Completion % by Module</div><div class="chart-sub">Average completion</div><div class="chart-wrap" style="height:260px"><canvas id="chart-completion"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Delivery Health</div><div class="chart-sub">On-Time vs Delayed vs At Risk</div><div class="chart-wrap" style="height:260px"><canvas id="chart-health"></canvas></div></div>
+      </div>
+      <div class="charts-grid charts-row-2">
+        <div class="chart-card"><div class="chart-title">📐 SRS → Go-Live Funnel</div><div class="chart-sub">Pipeline progression</div><div id="funnel-container"></div></div>
+        <div class="chart-card"><div class="chart-title">⚠️ Risk Heatmap</div><div class="chart-sub">Module risk distribution</div><div id="heatmap-container" class="heatmap-grid" style="margin-top:8px;"></div></div>
+      </div>
+      <div class="form-section"><div class="section-header"><div class="section-title">🗓 Upcoming Go-Lives (Next 30 Days)</div></div><div id="upcoming-golives"></div></div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="page" id="page-alerts">
+      <div class="section-header"><div class="section-title">🚨 Active Alerts & SLA Breaches</div></div>
+      <div id="alerts-container"></div>
+    </div>
+
+    <!-- MODULES -->
+    <div class="page" id="page-modules">
+      <div class="filters-bar">
+        <span class="filter-label">Filter:</span>
+        <select id="filter-phase" onchange="renderModuleTable()"><option value="">All Phases</option><option>SRS</option><option>Dev</option><option>SIT</option><option>UAT</option><option>Go-Live</option><option>Completed</option></select>
+        <select id="filter-risk" onchange="renderModuleTable()"><option value="">All Risk</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select>
+        <select id="filter-status" onchange="renderModuleTable()"><option value="">All Status</option><option>On Track</option><option>Delayed</option><option>At Risk</option><option>Completed</option><option>Not Started</option></select>
+        <select id="filter-module" onchange="renderModuleTable()"><option value="">All Modules</option></select>
+        <select id="filter-bank" onchange="renderModuleTable()"><option value="">All Banks</option></select>
+      </div>
+      <div class="form-section">
+        <div class="section-header">
+          <div class="section-title">Module Implementation Tracker <span id="record-count" style="font-size:12px;color:var(--text-muted);font-weight:400;"></span></div>
+          <div class="section-actions"><button class="btn btn-primary btn-sm" onclick="openAddModal()" id="add-record-btn">+ Add Record</button></div>
+        </div>
+        <div class="table-wrap">
+          <table id="module-table">
+            <thead><tr><th>Module</th><th>Bank</th><th>Phase</th><th>Progress</th><th>Target Date</th><th>Actual Date</th><th>Status</th><th>Risk</th><th>Resource</th><th>Comments</th><th>Actions</th></tr></thead>
+            <tbody id="module-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- BANKS -->
+    <div class="page" id="page-banks">
+      <div class="filters-bar">
+        <span class="filter-label">Bank:</span>
+        <select id="filter-bank-view" onchange="renderBankView()"><option value="">All Banks</option></select>
+      </div>
+      <div id="bank-cards-container"></div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="page" id="page-timeline">
+      <div class="form-section"><div class="section-title" style="margin-bottom:16px;">📅 Module Progress Timeline</div><div id="timeline-container"></div></div>
+    </div>
+
+    <!-- ADMIN -->
+    <div class="page" id="page-admin">
+      <div class="form-section">
+        <div class="form-section-title">⚙️ Add / Edit Implementation Record</div>
+        <div class="form-row">
+          <div class="form-group"><label>Module *</label><select id="admin-module"><option value="">Select Module</option></select></div>
+          <div class="form-group"><label>Bank *</label><select id="admin-bank"><option value="">Select Bank</option></select></div>
+        </div>
+        <div class="form-row form-row-3">
+          <div class="form-group"><label>Phase</label><select id="admin-phase"><option>SRS</option><option>Dev</option><option>SIT</option><option>UAT</option><option>Go-Live</option><option>Completed</option></select></div>
+          <div class="form-group"><label>Status</label><select id="admin-status"><option>On Track</option><option>Delayed</option><option>At Risk</option><option>Completed</option><option>Not Started</option></select></div>
+          <div class="form-group"><label>Risk Level</label><select id="admin-risk"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></div>
+        </div>
+        <div class="form-row form-row-3">
+          <div class="form-group"><label>Completion %</label><input type="number" id="admin-pct" min="0" max="100" placeholder="0–100" /></div>
+          <div class="form-group"><label>Target Date</label><input type="date" id="admin-target" /></div>
+          <div class="form-group"><label>Actual Go-Live Date</label><input type="date" id="admin-actual" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Assigned Resource</label><input type="text" id="admin-resource" placeholder="e.g. Rajesh Kumar" /></div>
+          <div class="form-group"><label>Challenges / Risks</label><input type="text" id="admin-challenge" placeholder="Describe challenges" /></div>
+        </div>
+        <div class="form-group"><label>Comments</label><textarea id="admin-comments" rows="2" placeholder="Add notes…"></textarea></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="saveRecord()" id="save-record-btn">💾 Save Record</button>
+          <button class="btn btn-secondary" onclick="clearAdminForm()">✕ Clear</button>
+        </div>
+        <input type="hidden" id="admin-edit-id" />
+      </div>
+
+      <div class="charts-grid charts-row-2">
+        <div class="form-section" style="margin-bottom:0">
+          <div class="form-section-title">📦 Manage Modules</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="new-module-name" placeholder="New module name…" style="flex:1;padding:10px 12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;outline:none;" />
+            <button class="btn btn-primary btn-sm" onclick="addModule()">+ Add</button>
+          </div>
+          <div id="module-list-admin" style="max-height:200px;overflow-y:auto;"></div>
+        </div>
+        <div class="form-section" style="margin-bottom:0">
+          <div class="form-section-title">🏦 Manage Banks</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="new-bank-name" placeholder="New bank name…" style="flex:1;padding:10px 12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;outline:none;" />
+            <button class="btn btn-primary btn-sm" onclick="addBank()">+ Add</button>
+          </div>
+          <div id="bank-list-admin" style="max-height:200px;overflow-y:auto;"></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">📋 Change History</div>
+        <div id="change-history"></div>
+      </div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="page" id="page-upload">
+      <div class="form-section">
+        <div class="form-section-title">📤 Import Data from Excel</div>
+        <div class="upload-area" onclick="document.getElementById('excel-upload').click()">
+          <div class="upload-icon">📊</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Click to upload your Excel file</div>
+          <div style="font-size:12px;color:var(--text-muted);">Supported: .xlsx, .xls, .csv</div>
+          <input type="file" id="excel-upload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(event)" />
+        </div>
+        <div id="upload-preview" style="margin-top:16px;"></div>
+        <div style="margin-top:20px;">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;"><strong>Expected columns:</strong></div>
+          <div style="font-size:12px;color:var(--text-muted);font-family:monospace;padding:12px;background:rgba(255,255,255,0.04);border-radius:8px;">Module | Bank | Phase | Status | Completion% | TargetDate | ActualDate | Risk | Resource | Comments | Challenges</div>
+          <button class="btn btn-secondary btn-sm" style="margin-top:12px;" onclick="downloadTemplate()">⬇ Download Template</button>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">⬇ Export Data</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="exportToExcel()">📊 Export to Excel</button>
+          <button class="btn btn-secondary" onclick="exportToPDF()">📄 Export to PDF</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Record</div>
+    <div class="form-row">
+      <div class="form-group"><label>Module</label><input type="text" id="modal-module" readonly style="opacity:0.6;" /></div>
+      <div class="form-group"><label>Bank</label><input type="text" id="modal-bank" readonly style="opacity:0.6;" /></div>
+    </div>
+    <div class="form-row form-row-3">
+      <div class="form-group"><label>Phase</label><select id="modal-phase"><option>SRS</option><option>Dev</option><option>SIT</option><option>UAT</option><option>Go-Live</option><option>Completed</option></select></div>
+      <div class="form-group"><label>Status</label><select id="modal-status"><option>On Track</option><option>Delayed</option><option>At Risk</option><option>Completed</option><option>Not Started</option></select></div>
+      <div class="form-group"><label>Risk</label><select id="modal-risk"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></div>
+    </div>
+    <div class="form-row form-row-3">
+      <div class="form-group"><label>Completion %</label><input type="number" id="modal-pct" min="0" max="100" /></div>
+      <div class="form-group"><label>Target Date</label><input type="date" id="modal-target" /></div>
+      <div class="form-group"><label>Actual Date</label><input type="date" id="modal-actual" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Resource</label><input type="text" id="modal-resource" /></div>
+      <div class="form-group"><label>Challenges</label><input type="text" id="modal-challenge" /></div>
+    </div>
+    <div class="form-group"><label>Comments</label><textarea id="modal-comments" rows="2"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveModalEdit()" id="modal-save-btn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">➕ Add New Record</div>
+    <div class="form-row">
+      <div class="form-group"><label>Module *</label><select id="add-module"><option value="">Select Module</option></select></div>
+      <div class="form-group"><label>Bank *</label><select id="add-bank"><option value="">Select Bank</option></select></div>
+    </div>
+    <div class="form-row form-row-3">
+      <div class="form-group"><label>Phase</label><select id="add-phase"><option>SRS</option><option>Dev</option><option>SIT</option><option>UAT</option><option>Go-Live</option><option>Completed</option></select></div>
+      <div class="form-group"><label>Status</label><select id="add-status"><option>On Track</option><option>Delayed</option><option>At Risk</option><option>Completed</option><option>Not Started</option></select></div>
+      <div class="form-group"><label>Risk</label><select id="add-risk"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></div>
+    </div>
+    <div class="form-row form-row-3">
+      <div class="form-group"><label>Completion %</label><input type="number" id="add-pct" min="0" max="100" value="0" /></div>
+      <div class="form-group"><label>Target Date</label><input type="date" id="add-target" /></div>
+      <div class="form-group"><label>Actual Date</label><input type="date" id="add-actual" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Resource</label><input type="text" id="add-resource" /></div>
+      <div class="form-group"><label>Challenges</label><input type="text" id="add-challenge" /></div>
+    </div>
+    <div class="form-group"><label>Comments</label><textarea id="add-comments" rows="2"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAddModal()" id="add-save-btn">Add Record</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════ API LAYER ═══════════════════════
+const API = window.location.origin + '/.netlify/functions';
+
+async function apiFetch(endpoint, options = {}) {
+  try {
+    const res = await fetch(`${API}/${endpoint}`, {
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+      ...options
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'API error');
+    return data;
+  } catch(err) {
+    console.error(`API error [${endpoint}]:`, err);
+    document.getElementById('db-status').className = 'db-status db-error';
+    document.getElementById('db-status').textContent = '● DB Error';
+    throw err;
+  }
+}
+
+// ═══════════════════════ STATE ═══════════════════════
+let currentUser = null;
+let allRecords = [];
+let allModules = [];
+let allBanks = [];
+let charts = {};
+let editingId = null;
+
+// ═══════════════════════ AUTH ═══════════════════════
+async function doLogin() {
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  if (!username || !password) { showLoginError('Please enter username and password.'); return; }
+
+  document.getElementById('login-btn').disabled = true;
+  document.getElementById('login-btn').innerHTML = '<span class="spinner"></span> Signing in…';
+  document.getElementById('login-loading').style.display = 'block';
+  document.getElementById('login-error').style.display = 'none';
+
+  try {
+    const data = await apiFetch('login', { method: 'POST', body: JSON.stringify({ username, password }) });
+    currentUser = data.user;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-avatar').textContent = currentUser.name[0].toUpperCase();
+    document.getElementById('user-name-display').textContent = currentUser.name;
+    document.getElementById('user-role-display').textContent = currentUser.role;
+    if (currentUser.role === 'viewer') {
+      document.getElementById('admin-nav-section').style.display = 'none';
+      document.getElementById('nav-admin').style.display = 'none';
+      document.getElementById('nav-upload').style.display = 'none';
+    }
+    await initApp();
+  } catch(err) {
+    showLoginError(err.message === 'Invalid credentials' ? 'Invalid username or password.' : 'Connection error. Check your network.');
+    document.getElementById('login-btn').disabled = false;
+    document.getElementById('login-btn').innerHTML = 'Sign In →';
+    document.getElementById('login-loading').style.display = 'none';
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').innerHTML = 'Sign In →';
+  document.getElementById('login-loading').style.display = 'none';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
+});
+
+// ═══════════════════════ INIT ═══════════════════════
+async function initApp() {
+  showLoading('Initializing database…');
+  try {
+    await apiFetch('init');
+    showLoading('Loading modules & banks…');
+    await loadCatalog();
+    showLoading('Loading records…');
+    await loadRecords();
+    hideLoading();
+    renderDashboard();
+    document.getElementById('db-status').className = 'db-status db-live';
+    document.getElementById('db-status').textContent = '● Neon DB Live';
+  } catch(err) {
+    hideLoading();
+    showToast('Failed to connect to database: ' + err.message, 'error');
+  }
+}
+
+async function loadCatalog() {
+  const [mods, banks] = await Promise.all([
+    apiFetch('catalog?type=modules'),
+    apiFetch('catalog?type=banks')
+  ]);
+  allModules = mods.map(m => m.name);
+  allBanks = banks.map(b => b.name);
+  populateAllSelects();
+}
+
+async function loadRecords() {
+  allRecords = await apiFetch('records');
+  updateAlertCount();
+}
+
+function populateAllSelects() {
+  const modSelects = ['admin-module','add-module','filter-module'];
+  const bankSelects = ['admin-bank','add-bank','filter-bank','filter-bank-view'];
+  modSelects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = '<option value="">Select Module</option>' + allModules.sort().map(m => `<option ${m===cur?'selected':''}>${m}</option>`).join('');
+  });
+  bankSelects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    const placeholder = id.includes('filter') ? 'All Banks' : 'Select Bank';
+    el.innerHTML = `<option value="">${placeholder}</option>` + allBanks.sort().map(b => `<option ${b===cur?'selected':''}>${b}</option>`).join('');
+  });
+}
+
+// ═══════════════════════ NAVIGATION ═══════════════════════
+const pageNames = {
+  dashboard:'📊 Dashboard Overview', alerts:'🚨 Alerts & SLA',
+  modules:'📦 Module Tracker', banks:'🏦 Bank Overview',
+  timeline:'📅 Timeline View', admin:'⚙️ Admin Panel', upload:'📤 Import / Export'
+};
+
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page)?.classList.add('active');
+  document.getElementById('header-title').textContent = pageNames[page];
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'modules') renderModuleTable();
+  if (page === 'banks') renderBankView();
+  if (page === 'timeline') renderTimeline();
+  if (page === 'admin') renderAdminPage();
+  if (page === 'alerts') renderAlerts();
+}
+
+// ═══════════════════════ LOADING ═══════════════════════
+function showLoading(text) {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-text').textContent = text;
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+
+// ═══════════════════════ KPIs ═══════════════════════
+function getStats() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  let delayed=0, atRisk=0, completed=0, onTrack=0, upcoming=0;
+  allRecords.forEach(r => {
+    if (r.status==='Delayed') delayed++;
+    else if (r.status==='At Risk') atRisk++;
+    else if (r.status==='Completed'||r.pct>=100) completed++;
+    else if (r.status==='On Track') onTrack++;
+    if (r.target_date) {
+      const t = new Date(r.target_date);
+      const diff = (t-today)/86400000;
+      if (diff>=0&&diff<=30&&r.pct<100) upcoming++;
+    }
+  });
+  return {delayed,atRisk,completed,onTrack,upcoming,total:allRecords.length};
+}
+
+function renderKPIs() {
+  const s = getStats();
+  const banks = [...new Set(allRecords.map(r=>r.bank))].length;
+  const mods = [...new Set(allRecords.map(r=>r.module))].length;
+  const avg = allRecords.length ? Math.round(allRecords.reduce((a,r)=>a+(r.pct||0),0)/allRecords.length) : 0;
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card blue"><span class="kpi-icon">📦</span><div class="kpi-label">Active Modules</div><div class="kpi-value">${mods}</div><div class="kpi-sub">${allModules.length} total defined</div></div>
+    <div class="kpi-card green"><span class="kpi-icon">🏦</span><div class="kpi-label">Total Banks</div><div class="kpi-value">${banks}</div><div class="kpi-sub">Across all implementations</div></div>
+    <div class="kpi-card green"><span class="kpi-icon">✅</span><div class="kpi-label">Completed</div><div class="kpi-value">${s.completed}</div><div class="kpi-sub">Records done</div></div>
+    <div class="kpi-card amber"><span class="kpi-icon">⏱</span><div class="kpi-label">Delayed</div><div class="kpi-value">${s.delayed}</div><div class="kpi-sub">Need attention</div></div>
+    <div class="kpi-card red"><span class="kpi-icon">⚠️</span><div class="kpi-label">At Risk</div><div class="kpi-value">${s.atRisk}</div><div class="kpi-sub">High priority</div></div>
+    <div class="kpi-card cyan"><span class="kpi-icon">🗓</span><div class="kpi-label">Upcoming Go-Lives</div><div class="kpi-value">${s.upcoming}</div><div class="kpi-sub">Next 30 days</div></div>
+    <div class="kpi-card purple"><span class="kpi-icon">📈</span><div class="kpi-label">Avg. Completion</div><div class="kpi-value">${avg}%</div><div class="kpi-sub">Overall progress</div></div>
+    <div class="kpi-card blue"><span class="kpi-icon">📋</span><div class="kpi-label">Total Records</div><div class="kpi-value">${s.total}</div><div class="kpi-sub">In Neon database</div></div>
+  `;
+}
+
+function updateAlertCount() {
+  const s = getStats();
+  const cnt = s.delayed + s.atRisk;
+  const el = document.getElementById('alert-count');
+  el.textContent = cnt;
+  el.style.display = cnt > 0 ? '' : 'none';
+}
+
+// ═══════════════════════ CHARTS ═══════════════════════
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function renderDashboard() {
+  renderKPIs();
+  renderCoverageChart();
+  renderPhaseChart();
+  renderCompletionChart();
+  renderHealthChart();
+  renderFunnel();
+  renderHeatmap();
+  renderUpcomingGoLives();
+}
+
+function renderCoverageChart() {
+  destroyChart('coverage');
+  const modCounts = {};
+  allRecords.forEach(r => { modCounts[r.module] = (modCounts[r.module]||0) + 1; });
+  const sorted = Object.entries(modCounts).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const ctx = document.getElementById('chart-coverage').getContext('2d');
+  charts['coverage'] = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: sorted.map(([m])=>m.length>22?m.substring(0,20)+'…':m),
+      datasets:[{label:'Banks',data:sorted.map(([,c])=>c),
+        backgroundColor:sorted.map(([,c])=>c>=38?'rgba(0,201,167,0.7)':c>=25?'rgba(58,134,255,0.7)':c>=10?'rgba(245,158,11,0.7)':'rgba(139,92,246,0.7)'),
+        borderRadius:4,borderSkipped:false}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#8899b4',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#8899b4'},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+}
+
+function renderPhaseChart() {
+  destroyChart('phase');
+  const phases = ['SRS','Dev','SIT','UAT','Go-Live','Completed'];
+  const counts = phases.map(ph=>allRecords.filter(r=>r.phase===ph).length);
+  const ctx = document.getElementById('chart-phase').getContext('2d');
+  charts['phase'] = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels:phases,datasets:[{data:counts,
+      backgroundColor:['rgba(139,92,246,0.8)','rgba(58,134,255,0.8)','rgba(245,158,11,0.8)','rgba(6,182,212,0.8)','rgba(16,185,129,0.8)','rgba(0,201,167,0.8)'],
+      borderColor:'rgba(10,22,40,0.8)',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{position:'right',labels:{color:'#8899b4',font:{size:11},padding:12}}}}
+  });
+}
+
+function renderCompletionChart() {
+  destroyChart('completion');
+  const modMap = {};
+  allRecords.forEach(r=>{if(!modMap[r.module])modMap[r.module]=[];modMap[r.module].push(r.pct||0);});
+  const sorted = Object.entries(modMap).map(([m,vals])=>[m,Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)]).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const ctx = document.getElementById('chart-completion').getContext('2d');
+  charts['completion'] = new Chart(ctx, {
+    type:'bar',
+    data:{labels:sorted.map(([m])=>m.length>18?m.substring(0,16)+'…':m),
+      datasets:[{label:'Avg %',data:sorted.map(([,v])=>v),
+        backgroundColor:sorted.map(([,v])=>v>=80?'rgba(0,201,167,0.75)':v>=50?'rgba(58,134,255,0.75)':'rgba(245,158,11,0.75)'),
+        borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{max:100,ticks:{color:'#8899b4',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#8899b4',font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+function renderHealthChart() {
+  destroyChart('health');
+  const s = getStats();
+  const ctx = document.getElementById('chart-health').getContext('2d');
+  charts['health'] = new Chart(ctx, {
+    type:'pie',
+    data:{labels:['On Track','Completed','Delayed','At Risk','Not Started'],
+      datasets:[{data:[s.onTrack,s.completed,s.delayed,s.atRisk,allRecords.filter(r=>r.status==='Not Started').length],
+        backgroundColor:['rgba(58,134,255,0.8)','rgba(0,201,167,0.8)','rgba(239,68,68,0.8)','rgba(245,158,11,0.8)','rgba(139,92,246,0.5)'],
+        borderColor:'rgba(10,22,40,0.8)',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#8899b4',font:{size:11},padding:10}}}}
+  });
+}
+
+function renderFunnel() {
+  const phases = ['SRS','Dev','SIT','UAT','Go-Live','Completed'];
+  const colors = ['#8b5cf6','#3a86ff','#f59e0b','#06b6d4','#10b981','#00c9a7'];
+  const counts = phases.map(ph=>allRecords.filter(r=>r.phase===ph).length);
+  const max = Math.max(...counts,1);
+  document.getElementById('funnel-container').innerHTML = '<div class="funnel-wrap">' +
+    phases.map((ph,i)=>{
+      const w = Math.max(10,Math.round((counts[i]/max)*100));
+      return `<div class="funnel-stage">
+        <div class="funnel-label">${ph}</div>
+        <div class="funnel-bar-bg"><div class="funnel-bar-fill" style="width:${w}%;background:${colors[i]}22;border-left:3px solid ${colors[i]};"><span style="color:${colors[i]}">${counts[i]}</span></div></div>
+        <div class="funnel-count" style="color:${colors[i]}">${counts[i]}</div>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+function renderHeatmap() {
+  const modMap = {};
+  allRecords.forEach(r=>{
+    if(!modMap[r.module]) modMap[r.module]=0;
+    if(r.risk==='High'||r.risk==='Critical') modMap[r.module]++;
+  });
+  const entries = Object.entries(modMap).slice(0,15);
+  document.getElementById('heatmap-container').innerHTML = entries.map(([m,cnt])=>{
+    const cls = cnt>=5?'heat-critical':cnt>=3?'heat-high':cnt>=1?'heat-medium':'heat-low';
+    const short = m.replace('Mobile Banking – ','MB–').replace('Asset Liability Management','ALM').replace('Anti-Money Laundering','AML');
+    return `<div class="heat-cell ${cls}" title="${m}: ${cnt} high-risk"><div class="heat-val">${cnt}</div><div class="heat-name">${short.length>9?short.substring(0,8)+'…':short}</div></div>`;
+  }).join('');
+}
+
+function renderUpcomingGoLives() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = allRecords.filter(r=>{
+    if (!r.target_date||r.pct>=100) return false;
+    const diff=(new Date(r.target_date)-today)/86400000;
+    return diff>=0&&diff<=30;
+  }).sort((a,b)=>new Date(a.target_date)-new Date(b.target_date)).slice(0,8);
+
+  if (!upcoming.length) {
+    document.getElementById('upcoming-golives').innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">No upcoming go-lives in next 30 days.</div>';
+    return;
+  }
+  document.getElementById('upcoming-golives').innerHTML=`<table><thead><tr><th>Module</th><th>Bank</th><th>Target Date</th><th>Phase</th><th>Progress</th><th>Days Left</th></tr></thead><tbody>`+
+    upcoming.map(r=>{
+      const days=Math.round((new Date(r.target_date)-today)/86400000);
+      const cls=days<=7?'red':days<=14?'amber':'green';
+      return `<tr><td>${r.module}</td><td>${r.bank}</td><td>${r.target_date}</td><td><span class="badge badge-blue">${r.phase}</span></td><td><div class="progress-bar"><div class="progress-fill" style="width:${r.pct}%;background:var(--accent)"></div></div></td><td><span class="badge badge-${cls}">${days}d</span></td></tr>`;
+    }).join('')+'</tbody></table>';
+}
+
+// ═══════════════════════ ALERTS ═══════════════════════
+function renderAlerts() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  let html = '';
+  allRecords.filter(r=>r.status==='Delayed').forEach(r=>{
+    html+=`<div class="alert-item alert-red"><div class="alert-icon">🔴</div><div><div class="alert-title">Delayed: ${r.module} @ ${r.bank}</div><div class="alert-desc">Phase: ${r.phase} | Progress: ${r.pct}% | Target: ${r.target_date||'N/A'} | Resource: ${r.resource||'Unassigned'}</div></div></div>`;
+  });
+  allRecords.filter(r=>r.status==='At Risk').forEach(r=>{
+    html+=`<div class="alert-item alert-amber"><div class="alert-icon">🟠</div><div><div class="alert-title">At Risk: ${r.module} @ ${r.bank}</div><div class="alert-desc">Phase: ${r.phase} | Risk: ${r.risk} | ${r.challenge||'No challenge noted'}</div></div></div>`;
+  });
+  allRecords.filter(r=>{
+    if(!r.target_date||r.pct>=100||r.status==='Completed') return false;
+    return new Date(r.target_date)<today;
+  }).forEach(r=>{
+    const days=Math.round((today-new Date(r.target_date))/86400000);
+    html+=`<div class="alert-item alert-red"><div class="alert-icon">⏰</div><div><div class="alert-title">SLA Breach: ${r.module} @ ${r.bank}</div><div class="alert-desc">Target was ${r.target_date} — overdue by ${days} day(s). Current: ${r.pct}% | Phase: ${r.phase}</div></div></div>`;
+  });
+  allRecords.filter(r=>{
+    if(!r.target_date||r.pct>=100) return false;
+    const diff=(new Date(r.target_date)-today)/86400000;
+    return diff>=0&&diff<=7;
+  }).forEach(r=>{
+    const days=Math.round((new Date(r.target_date)-today)/86400000);
+    html+=`<div class="alert-item alert-blue"><div class="alert-icon">📅</div><div><div class="alert-title">Go-Live in ${days} day(s): ${r.module} @ ${r.bank}</div><div class="alert-desc">Phase: ${r.phase} | Progress: ${r.pct}% | Resource: ${r.resource||'N/A'}</div></div></div>`;
+  });
+  if(!html) html='<div style="color:var(--text-muted);padding:24px;text-align:center;font-size:14px;">✅ No active alerts. All implementations on track.</div>';
+  document.getElementById('alerts-container').innerHTML=html;
+}
+
+// ═══════════════════════ MODULE TABLE ═══════════════════════
+function renderModuleTable() {
+  const search = document.getElementById('global-search').value.toLowerCase();
+  const phase = document.getElementById('filter-phase').value;
+  const risk = document.getElementById('filter-risk').value;
+  const status = document.getElementById('filter-status').value;
+  const module = document.getElementById('filter-module').value;
+  const bank = document.getElementById('filter-bank').value;
+
+  let filtered = allRecords.filter(r=>{
+    if (phase&&r.phase!==phase) return false;
+    if (risk&&r.risk!==risk) return false;
+    if (status&&r.status!==status) return false;
+    if (module&&r.module!==module) return false;
+    if (bank&&r.bank!==bank) return false;
+    if (search&&!`${r.module} ${r.bank} ${r.resource||''} ${r.comments||''}`.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  document.getElementById('record-count').textContent = `(${filtered.length} of ${allRecords.length})`;
+
+  const phaseC={SRS:'purple',Dev:'blue',SIT:'amber',UAT:'cyan','Go-Live':'green',Completed:'green'};
+  const statC={'On Track':'blue',Delayed:'red','At Risk':'amber',Completed:'green','Not Started':'gray'};
+  const riskC={Low:'green',Medium:'amber',High:'red',Critical:'purple'};
+  const canEdit = currentUser && currentUser.role !== 'viewer';
+
+  document.getElementById('module-tbody').innerHTML = filtered.map(r=>{
+    const pctColor=r.pct>=80?'#00c9a7':r.pct>=50?'#3a86ff':'#f59e0b';
+    return `<tr>
+      <td style="font-weight:500;max-width:150px;word-break:break-word;">${r.module}</td>
+      <td>${r.bank}</td>
+      <td><span class="badge badge-${phaseC[r.phase]||'gray'}">${r.phase}</span></td>
+      <td><div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="min-width:70px"><div class="progress-fill" style="width:${r.pct}%;background:${pctColor}"></div></div><span style="font-size:11px;color:${pctColor};font-weight:600">${r.pct}%</span></div></td>
+      <td style="font-size:12px;">${r.target_date||'—'}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${r.actual_date||'—'}</td>
+      <td><span class="badge badge-${statC[r.status]||'gray'}">${r.status}</span></td>
+      <td><span class="badge badge-${riskC[r.risk]||'gray'}">${r.risk}</span></td>
+      <td style="font-size:12px">${r.resource||'—'}</td>
+      <td style="font-size:12px;max-width:120px;color:var(--text-muted)">${r.comments||'—'}</td>
+      <td>${canEdit?`<button class="btn btn-secondary btn-sm" onclick="openEditModal(${r.id})">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteRecord(${r.id})">🗑</button>`:'—'}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:24px;">No records match filters.</td></tr>';
+}
+
+// ═══════════════════════ BANK VIEW ═══════════════════════
+function renderBankView() {
+  const sel = document.getElementById('filter-bank-view');
+  const allBankNames = [...new Set(allRecords.map(r=>r.bank))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Banks</option>' + allBankNames.map(b=>`<option ${b===cur?'selected':''}>${b}</option>`).join('');
+  const displayBanks = cur ? [cur] : allBankNames.slice(0,12);
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">';
+  displayBanks.forEach(bank=>{
+    const recs = allRecords.filter(r=>r.bank===bank);
+    const avg = recs.length?Math.round(recs.reduce((a,r)=>a+(r.pct||0),0)/recs.length):0;
+    const delayed = recs.filter(r=>r.status==='Delayed').length;
+    const done = recs.filter(r=>r.pct>=100).length;
+    const pctColor = avg>=75?'#00c9a7':avg>=40?'#3a86ff':'#f59e0b';
+    html+=`<div class="chart-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="width:36px;height:36px;border-radius:8px;background:rgba(0,201,167,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;">🏦</div>
+        <div><div style="font-weight:600;font-size:13px">${bank}</div><div style="font-size:11px;color:var(--text-muted)">${recs.length} modules</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:var(--text-muted)">Overall Progress</span><span style="font-size:13px;font-weight:700;color:${pctColor}">${avg}%</span></div>
+      <div class="progress-bar" style="margin-bottom:12px;height:8px;"><div class="progress-fill" style="width:${avg}%;background:${pctColor}"></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="badge badge-green">✅ ${done} done</span>
+        ${delayed?`<span class="badge badge-red">⚠️ ${delayed} delayed</span>`:''}
+        <span class="badge badge-blue">📋 ${recs.length} total</span>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  if (!cur && allBankNames.length > 12) html += `<div style="text-align:center;margin-top:16px;color:var(--text-muted);font-size:12px;">Showing 12 of ${allBankNames.length} banks. Use filter above for specific bank.</div>`;
+  document.getElementById('bank-cards-container').innerHTML = html;
+}
+
+// ═══════════════════════ TIMELINE ═══════════════════════
+function renderTimeline() {
+  const modMap = {};
+  allRecords.forEach(r=>{if(!modMap[r.module])modMap[r.module]=[];modMap[r.module].push(r.pct||0);});
+  const colors = ['#00c9a7','#3a86ff','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#10b981','#f97316'];
+  document.getElementById('timeline-container').innerHTML = Object.entries(modMap).map(([mod,vals],i)=>{
+    const avg=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+    const color=colors[i%colors.length];
+    return `<div class="timeline-item">
+      <div class="timeline-label" title="${mod}">${mod.length>22?mod.substring(0,20)+'…':mod}</div>
+      <div class="timeline-bar-wrap"><div class="timeline-bar" style="width:${Math.max(avg,2)}%;background:${color}22;border-left:3px solid ${color};"><span style="color:${color};font-size:10px">${avg}%</span></div></div>
+      <div class="timeline-pct">${avg}%</div>
+    </div>`;
+  }).join('')||'<div style="color:var(--text-muted)">No data.</div>';
+}
+
+// ═══════════════════════ ADMIN ═══════════════════════
+function renderAdminPage() {
+  populateAllSelects();
+  document.getElementById('module-list-admin').innerHTML = allModules.sort().map((m,i)=>
+    `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;"><span>${m}</span><button class="btn btn-danger btn-sm" onclick="removeModule('${m.replace(/'/g,"\\'")}')">✕</button></div>`
+  ).join('');
+  document.getElementById('bank-list-admin').innerHTML = allBanks.sort().map((b,i)=>
+    `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;"><span>${b}</span><button class="btn btn-danger btn-sm" onclick="removeBank('${b.replace(/'/g,"\\'")}')">✕</button></div>`
+  ).join('');
+  loadHistory();
+}
+
+async function loadHistory() {
+  try {
+    const hist = await apiFetch('history');
+    document.getElementById('change-history').innerHTML = hist.map(h=>
+      `<div class="history-item"><div>${h.action}</div><div class="history-time">${h.user_name} · ${new Date(h.created_at).toLocaleString()}</div></div>`
+    ).join('')||'<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No history yet.</div>';
+  } catch(e) {}
+}
+
+async function saveRecord() {
+  const mod = document.getElementById('admin-module').value;
+  const bank = document.getElementById('admin-bank').value;
+  if (!mod||!bank) { showToast('Please select Module and Bank.','error'); return; }
+  const editId = document.getElementById('admin-edit-id').value;
+  const btn = document.getElementById('save-record-btn');
+  btn.innerHTML = '<span class="spinner"></span> Saving…'; btn.disabled = true;
+
+  const body = {
+    module:mod, bank,
+    phase:document.getElementById('admin-phase').value,
+    status:document.getElementById('admin-status').value,
+    risk:document.getElementById('admin-risk').value,
+    pct:parseInt(document.getElementById('admin-pct').value)||0,
+    target_date:document.getElementById('admin-target').value||null,
+    actual_date:document.getElementById('admin-actual').value||null,
+    resource:document.getElementById('admin-resource').value,
+    challenge:document.getElementById('admin-challenge').value,
+    comments:document.getElementById('admin-comments').value,
+    user_name: currentUser.name
+  };
+
+  try {
+    if (editId) {
+      await apiFetch('records', { method:'PUT', body: JSON.stringify({id:editId,...body}) });
+    } else {
+      await apiFetch('records', { method:'POST', body: JSON.stringify(body) });
+    }
+    await loadRecords();
+    clearAdminForm();
+    renderAdminPage();
+    showToast('Record saved to Neon DB! ✅');
+  } catch(err) {
+    showToast('Save failed: '+err.message,'error');
+  } finally {
+    btn.innerHTML = '💾 Save Record'; btn.disabled = false;
+  }
+}
+
+function clearAdminForm() {
+  ['admin-module','admin-bank','admin-phase','admin-status','admin-risk','admin-pct','admin-target','admin-actual','admin-resource','admin-challenge','admin-comments'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('admin-edit-id').value='';
+}
+
+async function addModule() {
+  const name = document.getElementById('new-module-name').value.trim();
+  if (!name) return;
+  try {
+    await apiFetch('catalog?type=modules', { method:'POST', body: JSON.stringify({name}) });
+    await loadCatalog();
+    document.getElementById('new-module-name').value='';
+    renderAdminPage();
+    showToast(`Module "${name}" added!`);
+  } catch(err) { showToast(err.message,'error'); }
+}
+
+async function removeModule(name) {
+  if (!confirm(`Remove module "${name}"?`)) return;
+  const mods = await apiFetch('catalog?type=modules');
+  const mod = mods.find(m=>m.name===name);
+  if (mod) {
+    await apiFetch(`catalog?type=modules&id=${mod.id}`, { method:'DELETE' });
+    await loadCatalog();
+    renderAdminPage();
+    showToast(`Module removed.`);
+  }
+}
+
+async function addBank() {
+  const name = document.getElementById('new-bank-name').value.trim();
+  if (!name) return;
+  try {
+    await apiFetch('catalog?type=banks', { method:'POST', body: JSON.stringify({name}) });
+    await loadCatalog();
+    document.getElementById('new-bank-name').value='';
+    renderAdminPage();
+    showToast(`Bank "${name}" added!`);
+  } catch(err) { showToast(err.message,'error'); }
+}
+
+async function removeBank(name) {
+  if (!confirm(`Remove bank "${name}"?`)) return;
+  const banks = await apiFetch('catalog?type=banks');
+  const bank = banks.find(b=>b.name===name);
+  if (bank) {
+    await apiFetch(`catalog?type=banks&id=${bank.id}`, { method:'DELETE' });
+    await loadCatalog();
+    renderAdminPage();
+    showToast(`Bank removed.`);
+  }
+}
+
+// ═══════════════════════ MODALS ═══════════════════════
+function openEditModal(id) {
+  const r = allRecords.find(r=>r.id===id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById('modal-module').value = r.module;
+  document.getElementById('modal-bank').value = r.bank;
+  document.getElementById('modal-phase').value = r.phase;
+  document.getElementById('modal-status').value = r.status;
+  document.getElementById('modal-risk').value = r.risk;
+  document.getElementById('modal-pct').value = r.pct;
+  document.getElementById('modal-target').value = r.target_date||'';
+  document.getElementById('modal-actual').value = r.actual_date||'';
+  document.getElementById('modal-resource').value = r.resource||'';
+  document.getElementById('modal-challenge').value = r.challenge||'';
+  document.getElementById('modal-comments').value = r.comments||'';
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('edit-modal').classList.remove('open'); editingId=null; }
+
+async function saveModalEdit() {
+  if (!editingId) return;
+  const btn = document.getElementById('modal-save-btn');
+  btn.innerHTML='<span class="spinner"></span> Saving…'; btn.disabled=true;
+  try {
+    await apiFetch('records', {
+      method:'PUT',
+      body: JSON.stringify({
+        id:editingId,
+        phase:document.getElementById('modal-phase').value,
+        status:document.getElementById('modal-status').value,
+        risk:document.getElementById('modal-risk').value,
+        pct:parseInt(document.getElementById('modal-pct').value)||0,
+        target_date:document.getElementById('modal-target').value||null,
+        actual_date:document.getElementById('modal-actual').value||null,
+        resource:document.getElementById('modal-resource').value,
+        challenge:document.getElementById('modal-challenge').value,
+        comments:document.getElementById('modal-comments').value,
+        user_name:currentUser.name
+      })
+    });
+    await loadRecords();
+    closeModal(); renderModuleTable(); renderDashboard();
+    showToast('Record updated in Neon DB! ✅');
+  } catch(err) {
+    showToast('Update failed: '+err.message,'error');
+  } finally {
+    btn.innerHTML='Save Changes'; btn.disabled=false;
+  }
+}
+
+function openAddModal() {
+  populateAllSelects();
+  document.getElementById('add-modal').classList.add('open');
+}
+function closeAddModal() { document.getElementById('add-modal').classList.remove('open'); }
+
+async function saveAddModal() {
+  const mod = document.getElementById('add-module').value;
+  const bank = document.getElementById('add-bank').value;
+  if (!mod||!bank) { showToast('Select Module and Bank.','error'); return; }
+  const btn = document.getElementById('add-save-btn');
+  btn.innerHTML='<span class="spinner"></span> Saving…'; btn.disabled=true;
+  try {
+    await apiFetch('records', {
+      method:'POST',
+      body: JSON.stringify({
+        module:mod, bank,
+        phase:document.getElementById('add-phase').value,
+        status:document.getElementById('add-status').value,
+        risk:document.getElementById('add-risk').value,
+        pct:parseInt(document.getElementById('add-pct').value)||0,
+        target_date:document.getElementById('add-target').value||null,
+        actual_date:document.getElementById('add-actual').value||null,
+        resource:document.getElementById('add-resource').value,
+        challenge:document.getElementById('add-challenge').value,
+        comments:document.getElementById('add-comments').value,
+        user_name:currentUser.name
+      })
+    });
+    await loadRecords();
+    closeAddModal(); renderModuleTable(); renderDashboard();
+    showToast('Record added to Neon DB! ✅');
+  } catch(err) {
+    showToast('Add failed: '+err.message,'error');
+  } finally {
+    btn.innerHTML='Add Record'; btn.disabled=false;
+  }
+}
+
+async function deleteRecord(id) {
+  if (!confirm('Delete this record from the database?')) return;
+  try {
+    await apiFetch(`records?id=${id}&user=${currentUser.name}`, { method:'DELETE' });
+    await loadRecords();
+    renderModuleTable(); renderDashboard();
+    showToast('Record deleted.');
+  } catch(err) { showToast('Delete failed: '+err.message,'error'); }
+}
+
+document.getElementById('edit-modal').addEventListener('click',e=>{if(e.target===document.getElementById('edit-modal'))closeModal();});
+document.getElementById('add-modal').addEventListener('click',e=>{if(e.target===document.getElementById('add-modal'))closeAddModal();});
+
+// ═══════════════════════ EXCEL ═══════════════════════
+async function handleExcelUpload(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, {defval:''});
+      const rows = data.map(row=>({
+        module:row['Module']||row['module']||'',
+        bank:row['Bank']||row['bank']||'',
+        phase:row['Phase']||row['phase']||'SRS',
+        status:row['Status']||row['status']||'Not Started',
+        risk:row['Risk']||row['risk']||'Low',
+        pct:parseInt(row['Completion%']||row['completion%']||0)||0,
+        target_date:row['TargetDate']||row['Target Date']||null,
+        actual_date:row['ActualDate']||row['Actual Date']||null,
+        resource:row['Resource']||'',
+        challenge:row['Challenges']||'',
+        comments:row['Comments']||''
+      })).filter(r=>r.module&&r.bank);
+
+      showLoading(`Importing ${rows.length} rows to Neon…`);
+      const result = await apiFetch('history', { method:'POST', body: JSON.stringify({rows, user_name:currentUser.name}) });
+      await loadCatalog();
+      await loadRecords();
+      hideLoading();
+      document.getElementById('upload-preview').innerHTML=`<div class="alert-item alert-blue"><div class="alert-icon">✅</div><div><div class="alert-title">Import Successful!</div><div class="alert-desc">${result.total} rows processed → ${result.added} new, ${result.updated} updated in Neon database.</div></div></div>`;
+      showToast(`Imported ${result.total} rows to Neon DB!`);
+    } catch(err) {
+      hideLoading();
+      document.getElementById('upload-preview').innerHTML=`<div class="alert-item alert-red"><div class="alert-icon">❌</div><div><div class="alert-title">Import Failed</div><div class="alert-desc">${err.message}</div></div></div>`;
+    }
+  };
+  reader.readAsBinaryString(file);
+  event.target.value='';
+}
+
+function exportToExcel() {
+  const ws = XLSX.utils.json_to_sheet(allRecords.map(r=>({
+    Module:r.module,Bank:r.bank,Phase:r.phase,Status:r.status,
+    'Completion%':r.pct,TargetDate:r.target_date,ActualDate:r.actual_date,
+    Risk:r.risk,Resource:r.resource,Comments:r.comments,Challenges:r.challenge
+  })));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Implementation Data');
+  XLSX.writeFile(wb,`BankImpl_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Excel exported!');
+}
+
+function downloadTemplate() {
+  const ws = XLSX.utils.json_to_sheet([{Module:'HR & Payroll',Bank:'Sample Bank',Phase:'SRS',Status:'On Track','Completion%':25,TargetDate:'2025-12-31',ActualDate:'',Risk:'Low',Resource:'John Doe',Comments:'Initial phase',Challenges:''}]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Template');
+  XLSX.writeFile(wb,'BankImpl_Template.xlsx');
+}
+
+function exportToPDF() { window.print(); showToast('PDF dialog opened!'); }
+
+// ═══════════════════════ TOAST ═══════════════════════
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = (type==='success'?'✅ ':'❌ ')+msg;
+  t.className = 'toast'+(type==='error'?' error':'');
+  t.style.display='flex';
+  setTimeout(()=>t.style.display='none', 3500);
+}
+</script>
+</body>
+</html>
