@@ -513,7 +513,7 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 // ═══════════════════════ STATE ═══════════════════════
-let currentUser = null;
+let currentUser = JSON.parse(sessionStorage.getItem('bip_user') || 'null');
 let allRecords = [];
 let allModules = [];
 let allBanks = [];
@@ -534,6 +534,7 @@ async function doLogin() {
   try {
     const data = await apiFetch('login', { method: 'POST', body: JSON.stringify({ username, password }) });
     currentUser = data.user;
+    sessionStorage.setItem('bip_user', JSON.stringify(currentUser));
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('user-avatar').textContent = currentUser.name[0].toUpperCase();
@@ -561,6 +562,7 @@ function showLoginError(msg) {
 
 function doLogout() {
   currentUser = null;
+  sessionStorage.removeItem('bip_user');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-user').value = '';
@@ -577,9 +579,8 @@ document.addEventListener('keydown', e => {
 
 // ═══════════════════════ INIT ═══════════════════════
 async function initApp() {
-  showLoading('Initializing database…');
+  showLoading('Loading data from Neon…');
   try {
-    await apiFetch('init');
     showLoading('Loading modules & banks…');
     await loadCatalog();
     showLoading('Loading records…');
@@ -1232,6 +1233,24 @@ function downloadTemplate() {
 function exportToPDF() { window.print(); showToast('PDF dialog opened!'); }
 
 // ═══════════════════════ TOAST ═══════════════════════
+// ═══════════════════════ AUTO-RESTORE SESSION ═══════════════════════
+window.addEventListener('load', async () => {
+  if (currentUser) {
+    // User was already logged in - restore their session
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-avatar').textContent = currentUser.name[0].toUpperCase();
+    document.getElementById('user-name-display').textContent = currentUser.name;
+    document.getElementById('user-role-display').textContent = currentUser.role;
+    if (currentUser.role === 'viewer') {
+      document.getElementById('admin-nav-section').style.display = 'none';
+      document.getElementById('nav-admin').style.display = 'none';
+      document.getElementById('nav-upload').style.display = 'none';
+    }
+    await initApp();
+  }
+});
+
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
   t.textContent = (type==='success'?'✅ ':'❌ ')+msg;
